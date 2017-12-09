@@ -1,0 +1,115 @@
+---
+title: "data.table"
+subtitle: "Extension of `data.frame`"
+author: "Mario Annau"
+date: "12/12/2017"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(microbenchmark)
+source("functions.R")
+```
+
+## Introduction
+
+- Created by Matt Dowle in 
+- Most downloaded package according to ...
+- High performance version of data.frame
+
+## Why is data.table fast?
+
+- Hashed indices
+
+
+## data.table basics 
+
+Video from UseR! 2014: https://www.youtube.com/watch?v=qLrdYhizEMg
+
+General syntax:
+
+```{r, echo=TRUE, eval=FALSE}
+library(data.table)
+DT[i, j, by]
+```
+
+- i: On which rows (WHERE)
+- j: What to do (SELECT)
+- by: Grouped by what? (GROUP BY)
+
+## Problem 1: Calculate USD cross rates on Poloniex
+
+1.1. Aggregate all BTC denominated quotes to minute bars
+1.2. (Roll-)Join all BTC quotes to one table
+1.3. Calculate implied USD Cross rates using USDT_BTC
+1.4. Compare USD Cross rates with existing ones and see if there are discrepancies/arbitrage opportunities
+
+## Problem 1: Calculate USD cross rates on Poloniex
+
+The code is basically as follows:
+
+```{r, eval = FALSE, echo=TRUE}
+dat <- data.table(dat)
+dat[, Index := index]
+setkey(dat, Date) # do the ordering implicitly
+setkey(dat, Index)
+
+dat[, .(Open = data.table::first(Price), 
+       High = max(Price), 
+       Low = min(Price), 
+       Close = data.table::last(Price), 
+       Volume = sum(Volume)), by = Index]
+```
+
+
+```{r, cache=TRUE, echo=FALSE, eval=TRUE, results='asis'}
+#poloniex <- h5file("data/poloniex.h5", mode = "r")
+#allquotes <- list.groups(poloniex)
+#quotes.btc <- grep("BTC_", allquotes, value = TRUE, fixed = TRUE)
+
+btcxrp <- load_data("data/poloniex.h5", "BTC_XRP", folder = "POLONIEX")[[1]]
+index <- calc_index(btcxrp)
+mb <- microbenchmark(
+  agg_ohcl_base_r(btcxrp, index),
+  agg_ohcl_dplyr(btcxrp, index),
+  agg_ohcl_data_table(btcxrp, index), 
+  times = 1)
+knitr::kable(mb)
+```
+
+
+
+# data.frame(sort(sapply(allquotes, function(g) poloniex[[sprintf("%s/trades", g)]]$dims[1]), decreasing = TRUE))
+# sort(sapply(allquotes, function(g) poloniex[[sprintf("%s/trades", g)]]$dims[1]), decreasing = TRUE)
+quotes.usd <- grep("USDT_", allquotes, value = TRUE, fixed = TRUE)
+
+ccy.usd <- sapply(strsplit(quotes.usd, "_"), function(x) x[2])
+ccy.btc <- sapply(strsplit(quotes.btc, "_"), function(x) x[2])
+
+
+kraken <- h5file("data/kraken.h5", mode = "r")
+```
+
+
+
+
+
+
+
+
+
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
