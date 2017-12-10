@@ -46,16 +46,21 @@ calc_index <- function(dat, bname = "min", barsize = 60, firstdt = NULL, lastdt 
   ts[interval]
 }
 
-agg_ohcl_data_table <- function(dat, index) {
+agg_ohcl_data_table <- function(dat, index, hashkey = TRUE) {
   dat <- data.table(dat)
   dat[, Index := index]
-  setkey(dat, Date) # do the ordering implicitly
-  setkey(dat, Index)
   
-  dat[, .(Open = data.table::first(Price), 
+  if (hashkey) {
+    setkey(dat, Date) # do the ordering implicitly
+    setkey(dat, Index)
+  } else {
+    dat <- dat[order(Date),]
+  }
+  
+  dat[, .(Open = first(Price), 
          High = max(Price), 
          Low = min(Price), 
-         Close = data.table::last(Price), 
+         Close = last(Price), 
          Volume = sum(Volume)), by = Index]
 }
 

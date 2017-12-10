@@ -1,0 +1,4 @@
+img/data_table_talk.png filter=lfs diff=lfs merge=lfs -text
+img/Matt[[:space:]]Dowle's[[:space:]]_data.table_[[:space:]]talk_part.mkv filter=lfs diff=lfs merge=lfs -text
+img/Matt[[:space:]]Dowle's[[:space:]]_data.table_[[:space:]]talk[[:space:]]at[[:space:]]useR[[:space:]]2014[[:space:]](1080p_30fps_H264-128kbit_AAC).mp4 filter=lfs diff=lfs merge=lfs -text
+datatable.html filter=lfs diff=lfs merge=lfs -text

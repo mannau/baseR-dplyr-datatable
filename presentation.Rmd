@@ -11,6 +11,10 @@ knitr::opts_chunk$set(echo = FALSE)
 
 library(microbenchmark)
 source("functions.R")
+
+# Determine 10 most traded BTC pairs
+# f <- h5file("data/poloniex.h5", "r")
+# sort(sapply(list.groups(f), function(x) f[[sprintf("%s/trades", x)]]$dims[1] ), decreasing = TRUE)[1:10]
 ```
 
 ## Introduction
@@ -24,9 +28,14 @@ source("functions.R")
 - Hashed indices
 
 
-## data.table basics 
+## data.table basics (1)
 
-Video from UseR! 2014: https://www.youtube.com/watch?v=qLrdYhizEMg
+![Video from UseR! 2014](img/data_table_talk.png)[^1]
+
+[^1]: Video from UseR! 2014: https://www.youtube.com/watch?v=qLrdYhizEMg
+
+## data.table basics (2)
+
 
 General syntax:
 
@@ -48,14 +57,13 @@ DT[i, j, by]
 
 ## Problem 1: Calculate USD cross rates on Poloniex
 
-The code is basically as follows:
-
 ```{r, eval = FALSE, echo=TRUE}
-dat <- data.table(dat)
+dat <- data.table(dat) # Convert to data.table
 dat[, Index := index]
+setkey(dat, Index) # Set index key
 setkey(dat, Date) # do the ordering implicitly
-setkey(dat, Index)
 
+# Aggregate
 dat[, .(Open = data.table::first(Price), 
        High = max(Price), 
        Low = min(Price), 
@@ -63,11 +71,37 @@ dat[, .(Open = data.table::first(Price),
        Volume = sum(Volume)), by = Index]
 ```
 
+## Problem 1: Benchmark results
 
-```{r, cache=TRUE, echo=FALSE, eval=TRUE, results='asis'}
+```{r, cache=FALSE, echo=FALSE, eval=TRUE}
 #poloniex <- h5file("data/poloniex.h5", mode = "r")
 #allquotes <- list.groups(poloniex)
 #quotes.btc <- grep("BTC_", allquotes, value = TRUE, fixed = TRUE)
+
+btcxrp <- load_data("data/poloniex.h5", "BTC_XRP", folder = "POLONIEX")[[1]]
+index <- calc_index(btcxrp)
+mb <- microbenchmark(
+  agg_ohcl_data_table(btcxrp, index, hashkey = FALSE), 
+  agg_ohcl_data_table(btcxrp, index, hashkey = TRUE), 
+  times = 5)
+mb
+
+knitr::kable(t(mb))
+```
+
+
+
+
+<!--
+quotes.usd <- grep("USDT_", allquotes, value = TRUE, fixed = TRUE)
+
+ccy.usd <- sapply(strsplit(quotes.usd, "_"), function(x) x[2])
+ccy.btc <- sapply(strsplit(quotes.btc, "_"), function(x) x[2])
+
+
+kraken <- h5file("data/kraken.h5", mode = "r")
+
+
 
 btcxrp <- load_data("data/poloniex.h5", "BTC_XRP", folder = "POLONIEX")[[1]]
 index <- calc_index(btcxrp)
@@ -77,39 +111,6 @@ mb <- microbenchmark(
   agg_ohcl_data_table(btcxrp, index), 
   times = 1)
 knitr::kable(mb)
-```
 
-
-
-# data.frame(sort(sapply(allquotes, function(g) poloniex[[sprintf("%s/trades", g)]]$dims[1]), decreasing = TRUE))
-# sort(sapply(allquotes, function(g) poloniex[[sprintf("%s/trades", g)]]$dims[1]), decreasing = TRUE)
-quotes.usd <- grep("USDT_", allquotes, value = TRUE, fixed = TRUE)
-
-ccy.usd <- sapply(strsplit(quotes.usd, "_"), function(x) x[2])
-ccy.btc <- sapply(strsplit(quotes.btc, "_"), function(x) x[2])
-
-
-kraken <- h5file("data/kraken.h5", mode = "r")
-```
-
-
-
-
-
-
-
-
-
-
-## Slide with R Output
-
-```{r cars, echo = TRUE}
-summary(cars)
-```
-
-## Slide with Plot
-
-```{r pressure}
-plot(pressure)
-```
+-->
 
