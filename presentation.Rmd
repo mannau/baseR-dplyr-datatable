@@ -17,27 +17,89 @@ source("functions.R")
 # sort(sapply(list.groups(f), function(x) f[[sprintf("%s/trades", x)]]$dims[1] ), decreasing = TRUE)[1:10]
 ```
 
+# Introduction
+
+
+## Data Set
+
+<!-- TODO(mario) -->
+
+- Tick data from Poloniex from ... to ...
+- Obtained through rest API at ...
+- ...
+
+## Benchmark Time Series Use Cases
+
+1. Aggregate OHCL 1 minute bars for selected pairs (11) based on Poloniex data
+
+```{r}
+f <- h5file("data/poloniex.h5", "r")
+mostliquid <- sort(sapply(list.groups(f), function(x) f[[sprintf("%s/trades", x)]]$dims[1] ), decreasing = TRUE)[1:11]
+names(mostliquid) <- sapply(strsplit(names(mostliquid), "_"), function(x) x[2])
+mostliquid <- round(mostliquid / 1e6, 2)
+barplot(mostliquid, 
+        main = "Most Liquid BTC Cross-Rates on Poloniex", 
+        las = 2, 
+        ylab = "Million Ticks")
+f$close_all()
+```
+
+## Benchmark Time Series Use Cases
+
+2. Join aggregated pairs based on Datetime
+
+Optional: Calculate regarding USD Cross rates based on USDT_BTC (not-benchmarked)
+
+3. Filter resulting table (e.g. 12.12.-31.12.2017)
+
+Optional: Plot results (not-benchmarked)
+
+
+## Methods Used
+
+- base-R (florian)
+- dplyr (rainer)
+- data.table (mario)
+
+*Optional*
+
+- SQLite mem-mapped (florian)
+- pandas (mario)
+
+# base R
+
+## Introduction
+
+<!-- TODO(florian) -->
+
+# dplyr
+
+## Introduction
+
+
+<!-- TODO(rainer) -->
+
+# data.table
+
 ## Introduction
 
 - Created by Matt Dowle in 
 - Most downloaded package according to ...
 - High performance version of data.frame
 
-## Why is data.table fast?
-
-- Hashed indices
-
-
-## data.table basics (1)
+## Introduction (2)
 
 ![Video from UseR! 2014](img/data_table_talk.png)[^1]
 
 [^1]: Video from UseR! 2014: https://www.youtube.com/watch?v=qLrdYhizEMg
 
-## data.table basics (2)
 
+## Why is data.table fast?
 
-General syntax:
+- Internalize/Optimize common functions (e.g. GForce)
+- Efficient sorting functions
+
+## data.table Syntax
 
 ```{r, echo=TRUE, eval=FALSE}
 library(data.table)
@@ -48,20 +110,14 @@ DT[i, j, by]
 - j: What to do (SELECT)
 - by: Grouped by what? (GROUP BY)
 
-## Problem 1: Calculate USD cross rates on Poloniex
 
-1.1. Aggregate all BTC denominated quotes to minute bars
-1.2. (Roll-)Join all BTC quotes to one table
-1.3. Calculate implied USD Cross rates using USDT_BTC
-1.4. Compare USD Cross rates with existing ones and see if there are discrepancies/arbitrage opportunities
-
-## Problem 1: Calculate USD cross rates on Poloniex
+## 1. Calculate USD cross rates on Poloniex
 
 ```{r, eval = FALSE, echo=TRUE}
 dat <- data.table(dat) # Convert to data.table
 dat[, Index := index]
 setkey(dat, Index) # Set index key
-setkey(dat, Date) # do the ordering implicitly
+setkey(dat, Date) # do the ordering implicitly using key
 
 # Aggregate
 dat[, .(Open = data.table::first(Price), 
@@ -71,13 +127,20 @@ dat[, .(Open = data.table::first(Price),
        Volume = sum(Volume)), by = Index]
 ```
 
-## Problem 1: Benchmark results
+## 1. Calculate USD cross rates on Poloniex Caveats
 
-```{r, cache=FALSE, echo=FALSE, eval=TRUE}
+- `setkey(dat, Index)` does not bring any performance gains
+- In order for GForce to work, do NOT use `first` instead of `data.table::first` (function matching)
+
+
+## 1. Benchmark results
+
+```{r, echo=TRUE, eval=TRUE}
 #poloniex <- h5file("data/poloniex.h5", mode = "r")
 #allquotes <- list.groups(poloniex)
 #quotes.btc <- grep("BTC_", allquotes, value = TRUE, fixed = TRUE)
 
+# Add results without GForce
 btcxrp <- load_data("data/poloniex.h5", "BTC_XRP", folder = "POLONIEX")[[1]]
 index <- calc_index(btcxrp)
 mb <- microbenchmark(
@@ -85,9 +148,10 @@ mb <- microbenchmark(
   agg_ohcl_data_table(btcxrp, index, hashkey = TRUE), 
   times = 5)
 mb
-
-knitr::kable(t(mb))
 ```
+
+## 2. Join aggregated pairs based on Datetime
+
 
 
 
