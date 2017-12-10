@@ -2,5 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-data
+data/*.h5
 presentation_*

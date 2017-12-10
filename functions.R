@@ -4,6 +4,21 @@ library(lubridate)
 library(magrittr)
 library(dplyr)
 
+get_most_liquid <- function() {
+  f <- h5file("data/poloniex.h5", "r")
+  on.exit(f$close_all())
+  
+  mostliquid <- sort(sapply(list.groups(f), function(x) f[[sprintf("%s/trades", x)]]$dims[1] ), decreasing = TRUE)[1:11]
+  mostliquid <- round(mostliquid / 1e6, 2)
+  crosses <- sub("_", "/", names(mostliquid))
+  crosses <- sub("USDT/BTC", "BTC/USD", crosses)
+  mostliquid <- data.frame(CCY = crosses, TICKS = mostliquid)
+  mostliquid$Cross <- factor(ifelse(mostliquid$CCY == "BTC/USD", "USD-Cross", "BTC-Cross"))
+  exceptidx <- mostliquid$CCY != "BTC/USD"
+  mostliquid$CCY <- factor(mostliquid$CCY, levels = c(as.character(mostliquid$CCY[exceptidx]), as.character(mostliquid$CCY[!exceptidx])))
+  mostliquid
+}
+
 load_data <- function(fname, pairs, folder = c("POLONIEX", "KRAKEN")) {
   folder <- match.arg(folder, several.ok = FALSE)
   f <- h5file(fname, mode = "r")
@@ -64,6 +79,25 @@ agg_ohcl_data_table <- function(dat, index, hashkey = TRUE) {
          Volume = sum(Volume)), by = Index]
 }
 
+agg_ohcl_data_table_noGForce <- function(dat, index, hashkey = TRUE) {
+  dat <- data.table(dat)
+  dat[, Index := index]
+  
+  if (hashkey) {
+    setkey(dat, Date) # do the ordering implicitly
+    setkey(dat, Index)
+  } else {
+    dat <- dat[order(Date),]
+  }
+  
+  dat[, .(Open = data.table::first(Price), 
+          High = max(Price), 
+          Low = min(Price), 
+          Close = data.table::last(Price), 
+          Volume = sum(Volume)), by = Index]
+}
+
+
 agg_ohcl_base_r <- function(dat, index) {
   oidx <- order(dat$Date)
   dat <- dat[oidx, ]
@@ -89,4 +123,5 @@ agg_ohcl_dplyr <- function(dat, index) {
               Close = dplyr::last(Price), 
               Volume = sum(Volume))
 }
+
 

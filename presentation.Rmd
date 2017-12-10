@@ -1,7 +1,7 @@
 ---
-title: "data.table"
-subtitle: "Extension of `data.frame`"
-author: "Mario Annau"
+title: "base-R vs. dplyr vs. data.table"
+subtitle: "Data Munging in Memory"
+author: "Mario Annau, Rainer Stütz, Florian Schwendinger"
 date: "12/12/2017"
 output: ioslides_presentation
 ---
@@ -10,6 +10,7 @@ output: ioslides_presentation
 knitr::opts_chunk$set(echo = FALSE)
 
 library(microbenchmark)
+library(ggplot2)
 source("functions.R")
 
 # Determine 10 most traded BTC pairs
@@ -33,38 +34,35 @@ source("functions.R")
 1. Aggregate OHCL 1 minute bars for selected pairs (11) based on Poloniex data
 
 ```{r}
-f <- h5file("data/poloniex.h5", "r")
-mostliquid <- sort(sapply(list.groups(f), function(x) f[[sprintf("%s/trades", x)]]$dims[1] ), decreasing = TRUE)[1:11]
-names(mostliquid) <- sapply(strsplit(names(mostliquid), "_"), function(x) x[2])
-mostliquid <- round(mostliquid / 1e6, 2)
-barplot(mostliquid, 
-        main = "Most Liquid BTC Cross-Rates on Poloniex", 
-        las = 2, 
-        ylab = "Million Ticks")
-f$close_all()
+mostliquid <- get_most_liquid()
+
+ggplot(mostliquid) + 
+  geom_bar(aes(x = CCY, y = TICKS, fill = Cross), stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  ylab("Million Ticks") + xlab("")
 ```
 
 ## Benchmark Time Series Use Cases
 
 2. Join aggregated pairs based on Datetime
 
-Optional: Calculate regarding USD Cross rates based on USDT_BTC (not-benchmarked)
+2.1 Calculate regarding USD Cross rates based on USDT_BTC (not-benchmarked)
 
-3. Filter resulting table (e.g. 12.12.-31.12.2017)
+3. Filter resulting table (e.g. 12.12.-31.12.2016)
 
-Optional: Plot results (not-benchmarked)
+3.1 Plot results (not-benchmarked)
 
 
-## Methods Used
+## Packages Used
 
-- base-R (florian)
-- dplyr (rainer)
-- data.table (mario)
+- **base**-R (Florian)
+- **dplyr** (Rainer)
+- **data.table** (Mario)
 
 *Optional*
 
-- SQLite mem-mapped (florian)
-- pandas (mario)
+- **RSQLite** memory mapped (Florian)
+- Python **pandas** (Mario)
 
 # base R
 
@@ -89,9 +87,9 @@ Optional: Plot results (not-benchmarked)
 
 ## Introduction (2)
 
-![Video from UseR! 2014](img/data_table_talk.png)[^1]
+![Video from UseR! 2014](img/data_table_talk.png)
 
-[^1]: Video from UseR! 2014: https://www.youtube.com/watch?v=qLrdYhizEMg
+Video from UseR! 2014: https://www.youtube.com/watch?v=qLrdYhizEMg
 
 
 ## Why is data.table fast?
@@ -109,7 +107,6 @@ DT[i, j, by]
 - i: On which rows (WHERE)
 - j: What to do (SELECT)
 - by: Grouped by what? (GROUP BY)
-
 
 ## 1. Calculate USD cross rates on Poloniex
 
@@ -132,27 +129,79 @@ dat[, .(Open = data.table::first(Price),
 - `setkey(dat, Index)` does not bring any performance gains
 - In order for GForce to work, do NOT use `first` instead of `data.table::first` (function matching)
 
+```{r, eval = FALSE}
+dat[, .(Open = data.table::first(Price), 
+          High = max(Price), 
+          Low = min(Price), 
+          Close = data.table::last(Price), 
+          Volume = sum(Volume)), by = Index]
+```
+
 
 ## 1. Benchmark results
 
-```{r, echo=TRUE, eval=TRUE}
-#poloniex <- h5file("data/poloniex.h5", mode = "r")
-#allquotes <- list.groups(poloniex)
-#quotes.btc <- grep("BTC_", allquotes, value = TRUE, fixed = TRUE)
-
-# Add results without GForce
-btcxrp <- load_data("data/poloniex.h5", "BTC_XRP", folder = "POLONIEX")[[1]]
-index <- calc_index(btcxrp)
-mb <- microbenchmark(
-  agg_ohcl_data_table(btcxrp, index, hashkey = FALSE), 
-  agg_ohcl_data_table(btcxrp, index, hashkey = TRUE), 
-  times = 5)
-mb
+```{r, echo=FALSE, eval=TRUE}
+load("data/bench_datatable_1.rda")
+ggplot(bench_datatable_1) + geom_bar(aes(x = Method, y = value, fill = Var1), stat = "sum")
 ```
 
 ## 2. Join aggregated pairs based on Datetime
 
+```{r, echo=TRUE, eval = FALSE}
+Reduce(function(...) 
+  merge(..., by = "Index", all = TRUE), 
+  dat.all.hashkey)
+```
 
+## 2. Benchmark results
+
+```{r, echo=FALSE, eval=TRUE}
+load(file = "data/bench_datatable_2.rda")
+# TODO(mario): modify plot
+autoplot(bench_datatable_2) 
+```
+
+## 2.1 Calculate Cross Rates in USD
+
+```{r, echo = TRUE, eval = FALSE}
+dat.outer.join <- Reduce(merge, dat.all.hashkey, by = "Index", all = TRUE)
+cols <- !names(dat.outer.join) %in% c("Index", "USDT_BTC")
+cols2 <- rep("USDT_BTC", length(which(cols)))
+dt <- data.table(dat.outer.join[, "Index"], dat.outer.join[, ..cols] * dat.outer.join[, ..cols2])
+```
+
+
+## 3. Filter resulting table
+
+Filter resulting table from 12.12.-31.12.2016
+
+```{r, echo = TRUE, eval = FALSE}
+dt <- zoo::na.locf(dt)
+sset <- dt[Index >= as.POSIXct("2016-12-12") & Index <= as.POSIXct("2016-12-31")]
+```
+
+## 3. Benchmark results
+
+<!-- TODO(mario) -->
+
+## 3.1 Plot results
+
+```{r, echo = TRUE, eval = FALSE}
+cols <- 2:ncol(dt)
+tsfilter <- zoo(dt[, ..cols], order.by = dt[, "Index"])
+plot(tsfilter)
+```
+
+
+## Summary data.table
+
+<!-- TODO(mario) -->
+
+## Benchmark Summary data.table
+
+<!-- TODO(mario) -->
+
+# Conclusion
 
 
 
