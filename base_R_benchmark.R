@@ -47,7 +47,8 @@ dat.all.r <- lapply(rownames(mostliquid), function(x) {
 
 ## full outer join
 merger <- function(x, y) base::merge(x, y, by = "Index", all = TRUE)
-mb <- microbenchmark(z <- Reduce(merger, dat.all), times = 10)
+bench_r_2 <- microbenchmark(z <- Reduce(merger, dat.all.r), times = 10)
+bench_r_2
 
 save(bench_r_2, file = "data/bench_r_2.rda")
 
