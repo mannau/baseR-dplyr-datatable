@@ -210,6 +210,12 @@ data.frame(
     Volume = as.double(lapply(dat, function(x) sum(x$Volume))) )
 ```
 
+## Benchmark results
+```{r, echo=FALSE, eval=TRUE}
+load("data/bench_r_1.rda")
+tmp <- subset(bench_r_1, Method != "dplyr" & Method != "data.table")
+ggplot(tmp) + geom_bar(aes(x = Method, y = value, fill = Var1), stat = "sum")
+```
 
 # dplyr
 
@@ -360,7 +366,10 @@ df
 
 # Conclusion
 
-
+## Benchmark 1
+```{r, echo=FALSE, eval=TRUE}
+ggplot(bench_r_1) + geom_bar(aes(x = Method, y = value, fill = Var1), stat = "sum")
+```
 
 <!--
 quotes.usd <- grep("USDT_", allquotes, value = TRUE, fixed = TRUE)
