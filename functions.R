@@ -97,21 +97,6 @@ agg_ohcl_data_table_noGForce <- function(dat, index, hashkey = TRUE) {
           Volume = sum(Volume)), by = Index]
 }
 
-
-agg_ohcl_base_r <- function(dat, index) {
-  oidx <- order(dat$Date)
-  dat <- dat[oidx, ]
-  index <- index[oidx]
-  
-  data.frame(
-    Open = tapply(dat$Price, index, first),
-    High = tapply(dat$Price, index, max),
-    Low = tapply(dat$Price, index, min),
-    Close = tapply(dat$Price, index, tail, 1),
-    Volume = tapply(dat$Volume, index, sum)
-  )
-}
-
 agg_ohcl_dplyr <- function(dat, index) {
   dat$Index <- index
   dat %>% 
@@ -125,3 +110,86 @@ agg_ohcl_dplyr <- function(dat, index) {
 }
 
 
+agg_ohcl_base_r_tapply <- function(dat, index) {
+  oidx <- order(dat$Date)
+  dat <- dat[oidx, ]
+  index <- index[oidx]
+  
+  data.frame(
+    Open = tapply(dat$Price, index, first),
+    High = tapply(dat$Price, index, max),
+    Low = tapply(dat$Price, index, min),
+    Close = tapply(dat$Price, index, tail, 1),
+    Volume = tapply(dat$Volume, index, sum)
+  )
+}
+
+agg_ohcl_base_r_aggregate <- function(dat, index) {
+    oidx <- order(dat$Date)
+    dat <- dat[oidx, ]
+    index <- index[oidx]
+    x <- aggregate(dat[, c("Price", "Volume")], by = list(index), FUN = c,
+                   simplify = FALSE)
+    data.frame(
+        Index  = x[,1],
+        Open   = as.double(lapply(x$Price, head, 1)),
+        High   = as.double(lapply(x$Price, max)),
+        Low    = as.double(lapply(x$Price, min)),
+        Close  = as.double(lapply(x$Price, tail, 1)),
+        Volume = as.double(lapply(x$Volume, sum)))
+}
+
+agg_ohcl_base_r_match <- function(dat, index) {
+    oidx <- order(dat$Date)
+    dat <- dat[oidx, ]
+    index <- index[oidx]
+
+    ui <- unique(index)
+    j <- match(index, ui)
+    dat <- split(dat, j)
+
+    data.frame(
+        Index  = ui,
+        Open   = as.double(lapply(dat, function(x) head(x$Price, 1))),
+        High   = as.double(lapply(dat, function(x) max(x$Price))),
+        Low    = as.double(lapply(dat, function(x) min(x$Price))),
+        Close  = as.double(lapply(dat, function(x) tail(x$Price, 1))),
+        Volume = as.double(lapply(dat, function(x) sum(x$Volume))))
+}
+
+agg_ohcl_base_r <- function(dat, index) {
+    oidx <- order(dat$Date)
+    dat <- dat[oidx, c("Price", "Volume")]
+    index <- index[oidx]
+    ui <- !sorted_duplicated(index)
+    i <- cumsum(ui)
+    dat <- split(dat, i)
+    data.frame(
+        Index  = index[ui],
+        Open   = as.double(lapply(dat, function(x) head(x$Price, 1))),
+        High   = as.double(lapply(dat, function(x) max(x$Price))),
+        Low    = as.double(lapply(dat, function(x) min(x$Price))),
+        Close  = as.double(lapply(dat, function(x) tail(x$Price, 1))),
+        Volume = as.double(lapply(dat, function(x) sum(x$Volume))))
+}
+
+sorted_duplicated <- function(x) {
+    c(FALSE, tail(x, -1) == head(x, -1))
+}
+
+sqlite_agg <- function(dat, index) {
+  oidx <- order(dat$Date)
+  dat <- dat[oidx, ]
+  dat$Minutes <- index[oidx]
+
+  ## dbSendQuery(db, "DROP TABLE tmp;")
+  db <- dbConnect(dbDriver("SQLite"), dbname = ":memory:")
+  dbWriteTable(db, "tmp", dat)
+
+  query <- paste("SELECT Minutes as Ind, MAX(Price) as High,",
+                 "MIN(Price) as Low, SUM(Volume) as Volume", 
+                 "FROM tmp GROUP BY Minutes;")
+  df <- dbGetQuery(db, query)
+  dbDisconnect(db)
+  df
+}
