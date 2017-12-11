@@ -3,8 +3,8 @@ title: "base-R vs. dplyr vs. data.table"
 author: "Mario Annau, Rainer Stütz, Florian Schwendinger"
 date: "12/12/2017"
 output:
-  slidy_presentation: default
   ioslides_presentation: default
+  slidy_presentation: default
 subtitle: Data Munging in Memory
 ---
 
@@ -70,80 +70,107 @@ ggplot(mostliquid) +
 
 ## Introduction
 - aggregate
+- tapply
+- by (a wrapper for tapply)
+- match
+- merge (join)
+- split
+- subset
+
+## aggregate
 ```{r, echo=TRUE, eval=FALSE}
-
-## Default S3 method:
-aggregate(x, ...)
-
-## S3 method for class 'data.frame'
 aggregate(x, by, FUN, ..., simplify = TRUE, drop = TRUE)
-
-## S3 method for class 'formula'
 aggregate(formula, data, FUN, ...,
           subset, na.action = na.omit)
 ```
 
 ```{r, echo=TRUE, eval=TRUE}
-n <- 1000
-x <- data.frame(key1 = sample(LETTERS, n, TRUE), 
-                key2 = sample(LETTERS, n, TRUE), val = rep.int(1, n))
+x <- data.frame(key1 = sample(LETTERS[1:3], 100, TRUE), 
+                key2 = sample(LETTERS[1:3], 100, TRUE), val = rep.int(1, 100))
 z <- aggregate(x$val, by = list(key1 = x$key1, key2 = x$key2), FUN = sum)
 z <- aggregate(val ~ key1 + key2, data = x, FUN = sum)
 head(z)
 ```
 
-- tapply
+## tapply
 ```{r, echo=TRUE, eval=FALSE}
 tapply(X, INDEX, FUN = NULL, …, default = NA, simplify = TRUE)
 ```
 
 ```{r, echo=TRUE, eval=TRUE}
 tapply(1:6, c(1, 1, 1, 2, 2, 3), max)
+tapply(x$val, paste(x$key1, x$key2, sep = ""), sum)
+tapply(x$val, paste(x$key1, x$key2, sep = ""), c)
 ```
 
-- by (a wrapper for tapply)
+## by (a wrapper for tapply)
 ```{r, echo=TRUE, eval=FALSE}
 by(data, INDICES, FUN, ..., simplify = TRUE)
 ```
 
 ```{r, echo=TRUE, eval=TRUE}
-n <- 10
-x <- data.frame(key = sample(LETTERS[1:2], n, TRUE), val = rep.int(1, n))
-z <- by(x, x$key, FUN = rbind)
-unclass(z)
+x <- data.frame(key = c("A", "B", "B", "A"), val = 1:4)
+unclass(by(x, x$key, FUN = rbind))
 ```
 
-- match   
+## match   
 ```{r, echo=TRUE, eval=FALSE}
 match(x, table, nomatch = NA_integer_, incomparables = NULL)
 ```
 
 ```{r, echo=TRUE, eval=TRUE}
-x <- data.frame(key = LETTERS[1:5], val = rep.int(1, 5))
-y <- data.frame(key = c("B", "H", "A"), val = rep.int(1, 3))
-match(x$key, y$key)
+y <- data.frame(key = LETTERS[1:5], val = rep.int(1, 5))
+z <- data.frame(key = c("B", "H", "A"), val = rep.int(1, 3))
+match(y$key, z$key)
 ```
 
-- merge (join)
+## match 
+```{r, echo=TRUE, eval=TRUE}
+x <- data.frame(key = c("A", "B", "B", "A"), val = 1:4)
+x <- x[order(x$key),]
+j <- match(x$key, unique(x$key))
+split(x, j)
+```
+
+## merge
+```{r, echo=TRUE, eval=FALSE}
+merge(x, y, by = intersect(names(x), names(y)),
+      by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all,
+      sort = TRUE, suffixes = c(".x",".y"),
+      incomparables = NULL, ...)
+```
+
 ```{r, echo=TRUE, eval=TRUE}
 x <- data.frame(A = c(1, 2, 3), B = c(4, 0, 5), C = 7:9)
 y <- data.frame(A = c(1, 2, 3), B = c(4, 7, 5), D = 11:13)
 
 merge(x, y) ## natural join on all columns with the same name
+```
+
+## merge
+```{r, echo=TRUE, eval=TRUE}
 merge(x, y, by.x = "A", by.y = "A")
 merge(x, y, by.x = c("A", "B"), by.y = c("A", "B"))
 ```
 
-- split
+## split
+```{r, echo=TRUE, eval=FALSE}
+split(x, f, drop = FALSE)
+```
+
 ```{r, echo=TRUE, eval=TRUE}
 split(x, c(1, 2, 1))
+```
+
+## split
+```{r, echo=TRUE, eval=TRUE}
 split(x, c(1, 2, 1)) <- split(x, c(1, 1, 2))
 x
 split(x, c(1, 2, 1)) <- list(0, 9)
 x
 ```
 
-- subset
+## subset
 ```{r, echo=TRUE, eval=TRUE}
 subset(y, A >= 2 & A < 4, select=c(B, D)) 
 ```
@@ -151,6 +178,22 @@ subset(y, A >= 2 & A < 4, select=c(B, D))
 ## 1. Calculate USD cross rates on Poloniex Caveats
 There are several possibilites to obtain the cross rates.
 
+```{r, echo=TRUE, eval=FALSE}
+oidx <- order(dat$Date)
+dat <- dat[oidx, ]
+index <- index[oidx]
+x <- aggregate(dat[, c("Price", "Volume")], by = list(index), 
+               FUN = c, simplify = FALSE)
+data.frame(
+    Index  = x[,1],
+    Open   = as.double(lapply(x$Price, head, 1)),
+    High   = as.double(lapply(x$Price, max)),
+    Low    = as.double(lapply(x$Price, min)),
+    Close  = as.double(lapply(x$Price, tail, 1)),
+    Volume = as.double(lapply(x$Volume, sum)))
+```
+
+## 1. Calculate USD cross rates on Poloniex Caveats
 ```{r, echo=TRUE, eval=FALSE}
 oidx <- order(dat$Date)
 dat <- dat[oidx, c("Price", "Volume")]
@@ -167,27 +210,8 @@ data.frame(
     Volume = as.double(lapply(dat, function(x) sum(x$Volume))) )
 ```
 
-```{r, echo=TRUE, eval=FALSE}
-oidx <- order(dat$Date)
-dat <- dat[oidx, ]
-index <- index[oidx]
-x <- aggregate(dat[, c("Price", "Volume")], by = list(index), FUN = c,
-               simplify = FALSE)
-data.frame(
-    Index  = x[,1],
-    Open   = as.double(lapply(x$Price, head, 1)),
-    High   = as.double(lapply(x$Price, max)),
-    Low    = as.double(lapply(x$Price, min)),
-    Close  = as.double(lapply(x$Price, tail, 1)),
-    Volume = as.double(lapply(x$Volume, sum)))
-```
 
 # dplyr
-
-## Introduction
-
-
-<!-- TODO(rainer) -->
 
 # data.table
 
@@ -315,6 +339,7 @@ plot(tsfilter)
 
 
 # SQLite
+## SQLite
 - Is a embeddable SQL database engine.
 - Can be also used in-memory.
 ```{r, echo = TRUE, eval = FALSE}
