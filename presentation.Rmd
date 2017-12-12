@@ -1,8 +1,8 @@
 ---
 title: "In-Memory Data Munging "
-subtitle: "base&emsp;dplyr&emsp;data.table&emsp;monetdb&emsp;sqlite&emsp;pandas"
-author: "Mario Annau - <i>RBI Advanced Analytics</i><br>Rainer Stütz - <i>AIT Digital Insight Lab</i><br>Florian Schwendinger - <i>WU Vienna Institute for Statistics and Mathematics</i>"
-date: "VIENNA<-R MEETUP 12/12/2017"
+subtitle: "base&emsp;dplyr&emsp;data.table&emsp;sqlite&emsp;pandas"
+author: "Mario Annau - <i>RBI Advanced Analytics</i><br>Rainer Stütz - <i>AIT Digital Insight Lab</i><br>Florian Schwendinger - <i>WU Vienna, Institute for Statistics and Mathematics</i>"
+date: "VIENNA&larr;R MEETUP 12/12/2017"
 output:
   revealjs::revealjs_presentation:
     theme: white
@@ -292,14 +292,13 @@ provides an interface to work with data in
 
 - [RStudio dplyr cheatsheet](https://github.com/rstudio/cheatsheets/raw/master/data-transformation.pdf)
 - [dplyr package vignettes](https://cran.r-project.org/web/packages/dplyr/index.html)
-
     - [Introduction to dplyr](https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html)
     - [Programming with dplyr](https://cran.r-project.org/web/packages/dplyr/vignettes/programming.html)
     - [Two-table verbs](https://cran.r-project.org/web/packages/dplyr/vignettes/two-table.html)
     - [Window functions](https://cran.r-project.org/web/packages/dplyr/vignettes/window-functions.html)
     - [dplyr compatibility](https://cran.r-project.org/web/packages/dplyr/vignettes/compatibility.html)
 
-```{r eval=FALSE}
+```{r, echo = TRUE, eval = FALSE}
 browseVignettes(package = c("dplyr", "tibble"))
 ```
 
