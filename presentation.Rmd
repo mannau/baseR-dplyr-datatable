@@ -545,8 +545,8 @@ dbDisconnect(db)
 
 ## 1. Aggregation Benchmark Summary
 
-```{r, fig.width=12, fig.height=6}
-p <- autoplot(bench_r_1)
+```{r, echo = FALSE, fig.width=12, fig.height=6}
+suppressMessages(p <- autoplot(bench_r_1))
 ggplotly(p)
 ```
 
@@ -562,7 +562,7 @@ knitr::kable(summary(bench_r_1), digits = 2)
 ## 2. Merge/Join Benchmark Summary
 
 ```{r, fig.width=12, fig.height=6}
-p <- autoplot(bench_r_2)
+suppressMessages(p <- autoplot(bench_r_2))
 ggplotly(p)
 ```
 
@@ -577,7 +577,7 @@ knitr::kable(summary(bench_r_2), digits = 2)
 ## 3. Filter by Index Date
 
 ```{r, fig.width=12, fig.height=6}
-p <- autoplot(bench_r_3)
+suppressMessages(p <- autoplot(bench_r_3))
 ggplotly(p)
 ```
 
