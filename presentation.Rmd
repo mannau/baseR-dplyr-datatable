@@ -341,7 +341,8 @@ Units: **seconds**
 ## 3. Filter Use Case dplyr
 
 ```{r, echo = TRUE, eval = FALSE}
-purrr::reduce(dat.all.df, function(x, y) full_join(x, y, by = "Index"))
+dplyr_full_join %>%
+  filter(between(Index, as.POSIXct("2016-12-12"), as.POSIXct("2016-12-31")))
 ```
 
 ```{r}
