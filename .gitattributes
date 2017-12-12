@@ -4,3 +4,7 @@ img/Matt[[:space:]]Dowle's[[:space:]]_data.table_[[:space:]]talk[[:space:]]at[[:
 datatable.html filter=lfs diff=lfs merge=lfs -text
 data/bench_datatable_1.rda filter=lfs diff=lfs merge=lfs -text
 data/bench_datatable_2.rda filter=lfs diff=lfs merge=lfs -text
+data/bench_r_3.rds filter=lfs diff=lfs merge=lfs -text
+data/dat_all_df.rds filter=lfs diff=lfs merge=lfs -text
+data/bench_r_1.rds filter=lfs diff=lfs merge=lfs -text
+data/bench_r_2.rds filter=lfs diff=lfs merge=lfs -text

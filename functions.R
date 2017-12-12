@@ -9,7 +9,7 @@ get_most_liquid <- function() {
   on.exit(f$close_all())
   
   mostliquid <- sort(sapply(list.groups(f), function(x) f[[sprintf("%s/trades", x)]]$dims[1] ), decreasing = TRUE)[1:11]
-  mostliquid <- round(mostliquid / 1e6, 2)
+  #mostliquid <- round(mostliquid / 1e6, 2)
   crosses <- sub("_", "/", names(mostliquid))
   crosses <- sub("USDT/BTC", "BTC/USD", crosses)
   mostliquid <- data.frame(CCY = crosses, TICKS = mostliquid)
@@ -61,11 +61,11 @@ calc_index <- function(dat, bname = "min", barsize = 60, firstdt = NULL, lastdt 
   ts[interval]
 }
 
-agg_ohcl_data_table <- function(dat, index, hashkey = TRUE) {
+agg_ohcl_data_table <- function(dat, index, usekey = TRUE) {
   dat <- data.table(dat)
   dat[, Index := index]
   
-  if (hashkey) {
+  if (usekey) {
     setkey(dat, Date) # do the ordering implicitly
     setkey(dat, Index)
   } else {
@@ -79,11 +79,11 @@ agg_ohcl_data_table <- function(dat, index, hashkey = TRUE) {
          Volume = sum(Volume)), by = Index]
 }
 
-agg_ohcl_data_table_noGForce <- function(dat, index, hashkey = TRUE) {
+agg_ohcl_data_table_noGForce <- function(dat, index, usekey = TRUE) {
   dat <- data.table(dat)
   dat[, Index := index]
   
-  if (hashkey) {
+  if (usekey) {
     setkey(dat, Date) # do the ordering implicitly
     setkey(dat, Index)
   } else {
@@ -157,7 +157,7 @@ agg_ohcl_base_r_match <- function(dat, index) {
         Volume = as.double(lapply(dat, function(x) sum(x$Volume))))
 }
 
-agg_ohcl_base_r <- function(dat, index) {
+agg_ohcl_base_r_split <- function(dat, index) {
     oidx <- order(dat$Date)
     dat <- dat[oidx, c("Price", "Volume")]
     index <- index[oidx]
