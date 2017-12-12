@@ -103,14 +103,47 @@ plot_ly(data = mostliquid,
 
 There are several possibilites to obtain the cross rates:
 
+- `aggregate()`
 - `tapply()`
-- `split()` (followed by `apply()`)
+- `split()` (followed by `lapply()`)
 - `match()`
 
-## tapply Intro
+## aggregate Usage
+
+```{r, echo=TRUE, eval=FALSE}
+aggregate(x, by, FUN, ..., simplify = TRUE, drop = TRUE)
+aggregate(formula, data, FUN, ...,
+          subset, na.action = na.omit)
+```
+
+```{r, echo=TRUE, eval=TRUE}
+x <- data.frame(key1 = sample(LETTERS[1:3], 100, TRUE), 
+                key2 = sample(LETTERS[1:3], 100, TRUE), val = rep.int(1, 100))
+z <- aggregate(x$val, by = list(key1 = x$key1, key2 = x$key2), FUN = sum)
+z <- aggregate(val ~ key1 + key2, data = x, FUN = sum)
+head(z)
+```
+
+## aggregate Use Case
+
+Basic example usage:
+
+```{r, echo = TRUE, eval=FALSE}
+x <- aggregate(dat[, c("Price", "Volume")], by = list(index), FUN = c,
+               simplify = FALSE)
+data.frame(
+    Index  = x[,1],
+    Open   = as.double(lapply(x$Price, head, 1)),
+    High   = as.double(lapply(x$Price, max)),
+    Low    = as.double(lapply(x$Price, min)),
+    Close  = as.double(lapply(x$Price, tail, 1)),
+    Volume = as.double(lapply(x$Volume, sum)))
+```
+    
+## tapply Usage
 
 ```{r, eval = FALSE, echo = TRUE}
-function (X, INDEX, FUN = NULL, ..., default = NA, simplify = TRUE) 
+tapply(X, INDEX, FUN = NULL, ..., default = NA, simplify = TRUE) 
 ```
 
 ```{r, echo=TRUE, eval=TRUE}
@@ -131,19 +164,24 @@ data.frame(
   )
 ```
 
-## Split Intro
+## Split Usage
+
+```{r, eval = FALSE, echo = TRUE}
+split(x, f, drop = FALSE)
+```
+
 ```{r, echo=TRUE, eval=TRUE}
 x <- 1:3
 split(x, c(1, 2, 1))
 split(x, c(1, 2, 1)) <- split(x, c(1, 1, 2))
 x
-split(x, c(1, 2, 1)) <- list(0, 9)
-x
 ```
 
 ## Split Use Case
 
-`split()` followed by `apply()`:
+Basic example usage:
+
+`split()` followed by `lapply()`:
 
 ```{r, echo=TRUE, eval=FALSE}
 ui <- !(c(FALSE, tail(index, -1) == head(index, -1)))
@@ -158,7 +196,7 @@ data.frame(
     Volume = as.double(lapply(dat, function(x) sum(x$Volume))) )
 ```
 
-## match Intro
+## match Usage
 ```{r, echo=TRUE, eval=FALSE}
 match(x, table, nomatch = NA_integer_, incomparables = NULL)
 ```
@@ -195,21 +233,34 @@ Unit: **seconds**
 knitr::kable(head(summary(bench_r_1), 3), digits = 2)
 ```
 
-## merge intro
+## merge Usage
+```{r, echo=TRUE, eval=FALSE}
+merge(x, y, by = intersect(names(x), names(y)),
+      by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all,
+      sort = TRUE, suffixes = c(".x",".y"),
+      incomparables = NULL, ...)
+```
 
 ```{r, echo=TRUE, eval=TRUE}
 x <- data.frame(A = c(1, 2, 3), B = c(4, 0, 5), C = 7:9)
 y <- data.frame(A = c(1, 2, 3), B = c(4, 7, 5), D = 11:13)
 
 merge(x, y) ## natural join on all columns with the same name
+```
+
+## merge Usage
+
+```{r, echo=TRUE, eval=TRUE}
 merge(x, y, by.x = "A", by.y = "A")
 merge(x, y, by.x = c("A", "B"), by.y = c("A", "B"))
 ```
 
 ## merge use case
 
+`all = TRUE` performs a full outer join
 ```{r, eval = FALSE, echo = TRUE}
-Reduce(function(...) base::merge(..., by = "Index", all = TRUE), dat.all.df)
+merge_by_index <- function(x, y) base::merge(x, y, by = "Index", all = TRUE)
+Reduce(merge_by_index, dat.all.df)
 ```
 
 ## 2. Benchmark results
@@ -223,9 +274,9 @@ knitr::kable(head(summary(bench_r_2), 1), digits = 2)
 ## 3. Filter Use Case
 
 ```{r, eval=FALSE, echo=TRUE}
-base_r_merge[
-  base_r_merge$Index > as.POSIXct("2016-12-12") & 
-  base_r_merge$Index < as.POSIXct("2016-12-31"), ]
+b <- ( base_r_merge$Index > as.POSIXct("2016-12-12") 
+     & base_r_merge$Index < as.POSIXct("2016-12-31") )
+base_r_merge[b, ]
 ```
 
 ```{r, echo=FALSE, warning=FALSE}
@@ -469,22 +520,16 @@ tsfilter <- zoo(dt[, ..cols], order.by = dt[, "Index"])
 plot(tsfilter)
 ```
 
-<!-- TODO(florian) 
-
 # SQLite
 
-## Introduction
+## SQLite Introduction
 
 - Is a embeddable SQL database engine.
 - Can be also used in-memory.
 
 
-
+## SQLite Use Case
 ```{r, echo = TRUE, eval = FALSE}
-oidx <- order(dat$Date)
-dat <- dat[oidx, ]
-dat$Minutes <- index[oidx]
-
 db <- dbConnect(dbDriver("SQLite"), dbname = ":memory:")
 dbWriteTable(db, "tmp", dat)
 
@@ -493,9 +538,7 @@ query <- paste("SELECT Minutes as Ind, MAX(Price) as High,",
                "FROM tmp GROUP BY Minutes;")
 df <- dbGetQuery(db, query)
 dbDisconnect(db)
-df
 ```
--->
 
 # Conclusion
 
